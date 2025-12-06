@@ -1,18 +1,38 @@
 package main
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
+	"os"
 	"sync/atomic"
+
+	"github.com/gzkdev/chirpy/internal/database"
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
 
 func main() {
+	godotenv.Load()
+
+	dbURL := os.Getenv("DB_URL")
+	if dbURL == "" {
+		log.Fatal("DB_URL is not set")
+	}
+
+	dbConn, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		log.Fatalf("Error opening database: %s", err)
+	}
+
+	dbQueries := database.New(dbConn)
+
 	const filepathRoot = "."
 	const port = "8080"
 
 	apiCfg := &apiConfig{
 		fileserverHits: atomic.Int32{},
-	}
+		db:             dbQueries}
 
 	mux := http.NewServeMux()
 
@@ -29,6 +49,6 @@ func main() {
 		Addr:    ":" + port,
 	}
 
-	log.Printf("Serving files from %s on port: %s\n", filepathRoot, port)
+	log.Printf("Serving on port: %s\n", port)
 	log.Fatal(server.ListenAndServe())
 }
