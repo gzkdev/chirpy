@@ -30,9 +30,16 @@ func main() {
 	const filepathRoot = "."
 	const port = "8080"
 
+	platform := os.Getenv("PLATFORM")
+	if platform == "" {
+		log.Fatal("PLATFORM is not set")
+	}
+
 	apiCfg := &apiConfig{
 		fileserverHits: atomic.Int32{},
-		db:             dbQueries}
+		db:             dbQueries,
+		platform:       platform,
+	}
 
 	mux := http.NewServeMux()
 
@@ -43,6 +50,7 @@ func main() {
 	mux.HandleFunc("POST /admin/reset", apiCfg.resetMetrics)
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)
 	mux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp)
+	mux.HandleFunc("POST /api/users", apiCfg.createNewUser)
 
 	server := &http.Server{
 		Handler: mux,
